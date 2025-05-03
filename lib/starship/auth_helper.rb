@@ -44,15 +44,13 @@ module Starship
     end
     
     # Sign in to Apple Developer Portal
-    # @param email [String] Apple ID email
-    # @param password [String] Apple ID password
     # @return [Boolean] Whether authentication was successful
-    def sign_in(email = nil, password = nil)
-      email ||= ENV["APPLE_DEVELOPER_USERNAME"]
-      password ||= ENV["APPLE_DEVELOPER_PASSWORD"]
+    def sign_in
+      email = ENV["APPLE_DEVELOPER_USERNAME"]
+      password = ENV["APPLE_DEVELOPER_PASSWORD"]
       
       if !email || !password
-        raise Error, "Email and password are required. Set APPLE_ID and APPLE_PASSWORD environment variables or pass them as parameters."
+        raise Error, "Email and password are required. Set APPLE_ID and APPLE_PASSWORD environment variables."
       end
       
       @email = email

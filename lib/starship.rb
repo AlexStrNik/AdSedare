@@ -253,7 +253,7 @@ module Starship
             # TODO: figure out how to get this from old profile
             "isOfflineProfile" => false,
             "provisioningProfileName" => profile["provisioningProfile"]["name"],
-            "certificateIds" => profile["provisioningProfile"]["certificateIds"],
+            "certificateIds" => profile["provisioningProfile"]["certificateIds"].join(","),
             "deviceIds" => devices,
             "teamId" => team_id
           ),

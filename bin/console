@@ -16,6 +16,7 @@ def reload!
   # Remove the constant to clear it from memory
   Object.send(:remove_const, :Adsedare) if defined?(Adsedare)
   Object.send(:remove_const, :Starship) if defined?(Starship)
+  Object.send(:remove_const, :AppStoreConnect) if defined?(AppStoreConnect)
   
   load File.expand_path('../lib/adsedare.rb', __dir__)
   load File.expand_path('../lib/adsedare/capabilities.rb', __dir__)
@@ -25,6 +26,7 @@ def reload!
   load File.expand_path('../lib/starship/auth_helper.rb', __dir__)
 
   load File.expand_path('../lib/logging.rb', __dir__)
+  load File.expand_path('../lib/appstoreconnect.rb', __dir__)
   
   # Update the global reference
   $adsedare = Adsedare
