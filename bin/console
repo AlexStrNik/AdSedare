@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "bundler/setup"
+require "adsedare"
+
+# You can add fixtures and/or initialization code here to make experimenting
+# with your gem easier. You can also use a different console, if you like.
+
+# Create a global reference to the Adsedare module for easy access
+$adsedare = Adsedare
+
+# Define a reload method to make development easier
+def reload!
+  puts "Reloading Adsedare..."
+  # Remove the constant to clear it from memory
+  Object.send(:remove_const, :Adsedare) if defined?(Adsedare)
+  Object.send(:remove_const, :Starship) if defined?(Starship)
+  
+  load File.expand_path('../lib/adsedare.rb', __dir__)
+  load File.expand_path('../lib/adsedare/capabilities.rb', __dir__)
+  
+  load File.expand_path('../lib/starship.rb', __dir__)
+  load File.expand_path('../lib/starship/2fa_provider.rb', __dir__)
+  load File.expand_path('../lib/starship/auth_helper.rb', __dir__)
+
+  load File.expand_path('../lib/logging.rb', __dir__)
+  
+  # Update the global reference
+  $adsedare = Adsedare
+  puts "Adsedare reloaded!"
+  true
+end
+
+puts "Type reload! to reload the Adsedare module after making changes"
+
+require "irb"
+IRB.start(__FILE__)
