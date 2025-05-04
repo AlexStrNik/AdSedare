@@ -1,37 +1,21 @@
 require "xcodeproj"
-require "plist"
+require "base64"
+require "fileutils"
 
 require_relative "../appstoreconnect"
 
 module Adsedare
   class << self
-    def make_export_options(project_path = nil, export_path = nil, team_id = nil, options = {})
+    def install_profiles(project_path = nil)
       raise "Project path is not set" unless project_path
-      raise "Export path is not set" unless export_path
-
-      logger.info "Creating export options for project'"
 
       project = Xcodeproj::Project.open(project_path)
-      export_options = {
-        "method" => "ad-hoc",
-        "destination" => "export",
-        "signingStyle" => "manual",
-        "signingCertificate" => "Apple Distribution",
-        "provisioningProfiles" => {},
-      }.merge(options)
 
-      project_bundles = []
-
-      project.targets.each do |target|
-        target.build_configurations.each do |config|
-          team_id ||= config.build_settings["DEVELOPMENT_TEAM"]
-          project_bundles << config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"]
+      project_bundles = project.targets.map do |target|
+        target.build_configurations.map do |config|
+          config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"]
         end
-      end
-
-      export_options["teamID"] = team_id
-
-      logger.info "Fetching bundles with profiles for team ID '#{team_id}'"
+      end.flatten.uniq
 
       bundles_with_profiles = AppStoreConnect::Client.get_bundles_with_profiles(project_bundles)
       bundle_by_identifier = {}
@@ -78,16 +62,15 @@ module Adsedare
 
         logger.info "Profile for Bundle ID '#{bundle_id["id"]}' resolved to Profile '#{ad_hoc_profile["attributes"]["name"]}'"
 
-        profile_name = ad_hoc_profile["attributes"]["name"]
+        uuid = ad_hoc_profile["attributes"]["uuid"]
+        profile_content = Base64.decode64(ad_hoc_profile["attributes"]["profileContent"])
+        profile_path = "#{Dir.home}/Library/MobileDevice/Provisioning Profiles/#{uuid}.mobileprovision"
 
-        export_options["provisioningProfiles"][bundle_identifier] = profile_name
+        FileUtils.mkdir_p(File.dirname(profile_path))
+        File.write(profile_path, profile_content)
+
+        logger.info "Profile '#{ad_hoc_profile["attributes"]["name"]}' installed to '#{profile_path}'"
       end
-
-      options_plist = Plist::Emit.dump(export_options)
-      export_path = File.expand_path(export_path)
-      File.write(export_path, options_plist)
-
-      logger.info "Export options created at '#{export_path}'"
     end
   end
 end

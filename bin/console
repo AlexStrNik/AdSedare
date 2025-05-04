@@ -23,6 +23,7 @@ def reload!
   load File.expand_path('../lib/adsedare/keychain.rb', __dir__)
   load File.expand_path('../lib/adsedare/xcodeproj.rb', __dir__)
   load File.expand_path('../lib/adsedare/export_options.rb', __dir__)
+  load File.expand_path('../lib/adsedare/install_profiles.rb', __dir__)
   
   load File.expand_path('../lib/starship.rb', __dir__)
   load File.expand_path('../lib/starship/2fa_provider.rb', __dir__)

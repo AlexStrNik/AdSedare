@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    adsedare (0.0.1)
+    adsedare (0.0.3)
       faraday (~> 2.7)
       faraday-cookie_jar (~> 0.0.7)
       jwt (~> 2.7)
