@@ -31,24 +31,28 @@ module Adsedare
     "com.apple.developer.carplay-maps" => "CARPLAY_NAVIGATION"
   }
 
-  def self.parse_entitlements(path)
-    raise Error, "Entitlements file not found: #{path}" unless File.exist?(path)
+  class << self
+    private
     
-    entitlements = Plist.parse_xml(path)
-    capabilities = []
-    
-    entitlements.each do |key, value|
-      capability_type = ENTITLEMENTS_MAPPING[key]
-      next unless capability_type
+    def parse_entitlements(path)
+      raise Error, "Entitlements file not found: #{path}" unless File.exist?(path)
       
-      if key == "com.apple.security.application-groups"
-        capabilities << AppGroupsCapability.new(capability_type, value)
-      else
-        capabilities << SimpleCapability.new(capability_type)
+      entitlements = Plist.parse_xml(path)
+      capabilities = []
+      
+      entitlements.each do |key, value|
+        capability_type = ENTITLEMENTS_MAPPING[key]
+        next unless capability_type
+        
+        if key == "com.apple.security.application-groups"
+          capabilities << AppGroupsCapability.new(capability_type, value)
+        else
+          capabilities << SimpleCapability.new(capability_type)
+        end
       end
+      
+      capabilities
     end
-    
-    capabilities
   end
   
   class Capability
