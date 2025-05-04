@@ -43,6 +43,7 @@ GEM
     plist (3.2.0)
     rake (13.2.1)
     rexml (3.4.1)
+    rufo (0.18.1)
     uri (1.0.3)
     xcodeproj (1.27.0)
       CFPropertyList (>= 2.3.3, < 4.0)
@@ -57,6 +58,7 @@ PLATFORMS
 
 DEPENDENCIES
   adsedare!
+  rufo
 
 BUNDLED WITH
    2.4.19
