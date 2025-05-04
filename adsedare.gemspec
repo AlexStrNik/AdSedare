@@ -31,6 +31,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "xcodeproj", "~> 1.27.0"
   spec.add_dependency "jwt", "~> 2.7"
   spec.add_dependency "faraday", "~> 2.7"
-  spec.add_dependency "faraday-cookie_jar", "~> 0.0.7" 
+  spec.add_dependency "faraday-cookie_jar", "~> 0.0.7"
   spec.add_dependency "plist", "~> 3.2.0"
 end

@@ -5,4 +5,4 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in adsedare.gemspec
 gemspec
 
-gem 'rufo'
+gem "rufo"

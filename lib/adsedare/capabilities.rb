@@ -28,59 +28,60 @@ module Adsedare
     "com.apple.developer.family-controls" => "FAMILY_CONTROLS",
     "com.apple.developer.devicecheck.appattest-environment" => "APP_ATTEST",
     "com.apple.developer.game-center" => "GAME_CENTER",
-    "com.apple.developer.carplay-maps" => "CARPLAY_NAVIGATION"
+    "com.apple.developer.carplay-maps" => "CARPLAY_NAVIGATION",
   }
 
   class << self
     private
-    
+
     def parse_entitlements(path)
       raise Error, "Entitlements file not found: #{path}" unless File.exist?(path)
-      
+
       entitlements = Plist.parse_xml(path)
       capabilities = []
-      
+
       entitlements.each do |key, value|
         capability_type = ENTITLEMENTS_MAPPING[key]
         next unless capability_type
-        
+
         if key == "com.apple.security.application-groups"
           capabilities << AppGroupsCapability.new(capability_type, value)
         else
           capabilities << SimpleCapability.new(capability_type)
         end
       end
-      
+
       capabilities
     end
   end
-  
+
   class Capability
     attr_reader :type
-    
+
     def initialize(type)
       @type = type
     end
-    
+
     def check?(bundle_info)
-      bundle_info["included"].any? { 
-        |cap| cap["type"] == "capabilities" && cap["id"] == @type 
+      bundle_info["included"].any? {
+        |cap|
+        cap["type"] == "capabilities" && cap["id"] == @type
       }
     end
-    
+
     def to_bundle_capability(bundle_info, team_id)
       return {
-        "type" => "bundleIdCapabilities",
-        "attributes" => {
-          "enabled" => true,
-          "settings" => []
-        },
-        "relationships" => {
-          "capability" => {
-            "data" => { "type" => "capabilities", "id" => @type }
-          }
-        }
-      }
+               "type" => "bundleIdCapabilities",
+               "attributes" => {
+                 "enabled" => true,
+                 "settings" => [],
+               },
+               "relationships" => {
+                 "capability" => {
+                   "data" => { "type" => "capabilities", "id" => @type },
+                 },
+               },
+             }
     end
   end
 
@@ -89,34 +90,38 @@ module Adsedare
 
   class AppGroupsCapability < Capability
     attr_reader :groups
-    
+
     def initialize(type, groups)
       super(type)
       @groups = groups
     end
-    
+
     def check?(bundle_info)
-      have_capability = bundle_info["included"].any? { 
-        |cap| cap["type"] == "capabilities" && cap["id"] == @type 
+      have_capability = bundle_info["included"].any? {
+        |cap|
+        cap["type"] == "capabilities" && cap["id"] == @type
       }
       return false unless have_capability
 
-      registered_groups = bundle_info["included"].select { 
-        |cap| cap["type"] == "appGroups"
-      }.map { 
-        |cap| cap["attributes"]["identifier"]
+      registered_groups = bundle_info["included"].select {
+        |cap|
+        cap["type"] == "appGroups"
+      }.map {
+        |cap|
+        cap["attributes"]["identifier"]
       }
-      
+
       return @groups.all? { |group| registered_groups.include?(group) }
     end
-    
+
     def to_bundle_capability(bundle_info, team_id)
       registered_app_groups = {}
-      
+
       Starship::Client.get_app_groups(team_id).each {
-        |app_group| registered_app_groups[app_group["identifier"]] = app_group["applicationGroup"]
+        |app_group|
+        registered_app_groups[app_group["identifier"]] = app_group["applicationGroup"]
       }
-      
+
       @groups.each do |group|
         if not registered_app_groups.include?(group)
           new_app_group = Starship::Client.create_app_group(group, team_id)
@@ -127,11 +132,11 @@ module Adsedare
       bundle_capability = super(bundle_info, team_id)
 
       app_groups = {
-        "data" => @groups.map { |group| { "type" => "appGroups", "id" => registered_app_groups[group] } } 
+        "data" => @groups.map { |group| { "type" => "appGroups", "id" => registered_app_groups[group] } },
       }
 
       bundle_capability["relationships"]["appGroups"] = app_groups
-      
+
       return bundle_capability
     end
   end

@@ -23,20 +23,20 @@ module Adsedare
     def renew_profiles(project_path = nil, certificate_id = nil, team_id = nil)
       raise "Project path is not set" unless project_path
       raise "Certificate ID is not set" unless certificate_id
-      
+
       project = Xcodeproj::Project.open(project_path)
       project_dir = File.dirname(project_path)
-      
+
       bundle_entitlements = {}
 
       project.targets.each do |target|
         target.build_configurations.each do |config|
           bundle_identifier = config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"]
           entitlements_path = config.build_settings["CODE_SIGN_ENTITLEMENTS"]
-          
+
           # If team_id is not set, use the first one from the project
           team_id ||= config.build_settings["DEVELOPMENT_TEAM"]
-          
+
           if entitlements_path
             full_entitlements_path = File.join(project_dir, entitlements_path)
             bundle_entitlements[bundle_identifier] = full_entitlements_path
@@ -52,10 +52,10 @@ module Adsedare
         unless bundle_id
           logger.warn "Bundle '#{bundle_identifier}' is missing in Apple Developer portal. Will create."
           bundle_id = Starship::Client.create_bundle(
-            bundle_identifier, 
+            bundle_identifier,
             team_id,
             # You cannot create bundle without this capability
-            [ SimpleCapability.new("IN_APP_PURCHASE").to_bundle_capability(nil, nil) ]
+            [SimpleCapability.new("IN_APP_PURCHASE").to_bundle_capability(nil, nil)]
           )["data"]["id"]
           bundle_by_identifier[bundle_identifier] = bundle_id
           logger.info "Bundle '#{bundle_identifier}' created with ID '#{bundle_id}'"
@@ -89,7 +89,7 @@ module Adsedare
 
     def install_profiles(project_path = nil)
       raise "Project path is not set" unless project_path
-      
+
       project = Xcodeproj::Project.open(project_path)
 
       project_bundles = project.targets.map do |target|
@@ -117,11 +117,11 @@ module Adsedare
           next
         end
 
-        logger.info "Bundle '#{bundle_identifier}' resolved to Bundle ID '#{bundle_id['id']}'"
+        logger.info "Bundle '#{bundle_identifier}' resolved to Bundle ID '#{bundle_id["id"]}'"
 
         profiles = bundle_id["relationships"]["profiles"]["data"]
         unless profiles
-          logger.warn "Profile for Bundle ID '#{bundle_id['id']}' is missing in App Store Connect. Skipping."
+          logger.warn "Profile for Bundle ID '#{bundle_id["id"]}' is missing in App Store Connect. Skipping."
           next
         end
 
@@ -137,11 +137,11 @@ module Adsedare
         end
 
         unless ad_hoc_profile
-          logger.warn "Profile for Bundle ID '#{bundle_id['id']}' is missing in App Store Connect. Skipping."
+          logger.warn "Profile for Bundle ID '#{bundle_id["id"]}' is missing in App Store Connect. Skipping."
           next
         end
 
-        logger.info "Profile for Bundle ID '#{bundle_id['id']}' resolved to Profile '#{ad_hoc_profile['attributes']['name']}'"
+        logger.info "Profile for Bundle ID '#{bundle_id["id"]}' resolved to Profile '#{ad_hoc_profile["attributes"]["name"]}'"
 
         uuid = ad_hoc_profile["attributes"]["uuid"]
         profile_content = Base64.decode64(ad_hoc_profile["attributes"]["profileContent"])
@@ -150,7 +150,7 @@ module Adsedare
         FileUtils.mkdir_p(File.dirname(profile_path))
         File.write(profile_path, profile_content)
 
-        logger.info "Profile '#{ad_hoc_profile['attributes']['name']}' installed to '#{profile_path}'"
+        logger.info "Profile '#{ad_hoc_profile["attributes"]["name"]}' installed to '#{profile_path}'"
       end
     end
 
@@ -164,7 +164,7 @@ module Adsedare
         "destination" => "export",
         "signingStyle" => "manual",
         "signingCertificate" => "Apple Distribution",
-        "provisioningProfiles" => {}
+        "provisioningProfiles" => {},
       }.merge(options)
 
       project_bundles = []
@@ -199,11 +199,11 @@ module Adsedare
           next
         end
 
-        logger.info "Bundle '#{bundle_identifier}' resolved to Bundle ID '#{bundle_id['id']}'"
+        logger.info "Bundle '#{bundle_identifier}' resolved to Bundle ID '#{bundle_id["id"]}'"
 
         profiles = bundle_id["relationships"]["profiles"]["data"]
         unless profiles
-          logger.warn "Profile for Bundle ID '#{bundle_id['id']}' is missing in App Store Connect. Skipping."
+          logger.warn "Profile for Bundle ID '#{bundle_id["id"]}' is missing in App Store Connect. Skipping."
           next
         end
 
@@ -219,14 +219,14 @@ module Adsedare
         end
 
         unless ad_hoc_profile
-          logger.warn "Profile for Bundle ID '#{bundle_id['id']}' is missing in App Store Connect. Skipping."
+          logger.warn "Profile for Bundle ID '#{bundle_id["id"]}' is missing in App Store Connect. Skipping."
           next
         end
 
-        logger.info "Profile for Bundle ID '#{bundle_id['id']}' resolved to Profile '#{ad_hoc_profile['attributes']['name']}'"
+        logger.info "Profile for Bundle ID '#{bundle_id["id"]}' resolved to Profile '#{ad_hoc_profile["attributes"]["name"]}'"
 
         profile_name = ad_hoc_profile["attributes"]["name"]
-        
+
         export_options["provisioningProfiles"][bundle_identifier] = profile_name
       end
 
@@ -238,7 +238,7 @@ module Adsedare
 
     def patch_project(project_path, team_id = nil)
       raise "Project path is not set" unless project_path
-      
+
       project = Xcodeproj::Project.open(project_path)
 
       project_bundles = project.targets.map do |target|
@@ -258,7 +258,7 @@ module Adsedare
       bundles_with_profiles["included"].each do |profile|
         profiles_by_id[profile["id"]] = profile
       end
-      
+
       project.targets.each do |target|
         target.build_configurations.each do |config|
           bundle_identifier = config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"]
@@ -268,11 +268,11 @@ module Adsedare
             next
           end
 
-          logger.info "Bundle '#{bundle_identifier}' resolved to Bundle ID '#{bundle_id['id']}'"
+          logger.info "Bundle '#{bundle_identifier}' resolved to Bundle ID '#{bundle_id["id"]}'"
 
           profiles = bundle_id["relationships"]["profiles"]["data"]
           unless profiles
-            logger.warn "Profile for Bundle ID '#{bundle_id['id']}' is missing in App Store Connect. Skipping."
+            logger.warn "Profile for Bundle ID '#{bundle_id["id"]}' is missing in App Store Connect. Skipping."
             next
           end
 
@@ -288,7 +288,7 @@ module Adsedare
           end
 
           unless ad_hoc_profile
-            logger.warn "Profile for Bundle ID '#{bundle_id['id']}' is missing in App Store Connect. Skipping."
+            logger.warn "Profile for Bundle ID '#{bundle_id["id"]}' is missing in App Store Connect. Skipping."
             next
           end
 
@@ -358,7 +358,7 @@ module Adsedare
 
       if need_update
         logger.warn "Profile '#{profile["provisioningProfile"]["name"]}' is missing one or more devices."
-        
+
         Starship::Client.regen_provisioning_profile(profile, team_id, deviceIds)
 
         logger.info "Profile '#{profile["provisioningProfile"]["name"]}' updated."
@@ -374,7 +374,7 @@ module Adsedare
       logger.info "Checking capabilities for bundle '#{bundle_identifier}'"
 
       capabilities = parse_entitlements(entitlements_path)
-      
+
       need_update = false
 
       capabilities.each do |capability|
@@ -387,10 +387,9 @@ module Adsedare
       if need_update
         logger.warn "Bundle '#{bundle_identifier}' is missing one or more capabilities."
         new_capabilities = (
-          # You can't remove IN_APP_PURCHASE capability for some reason
-          capabilities + [ SimpleCapability.new("IN_APP_PURCHASE") ]
-        ).map { |capability| capability.to_bundle_capability(bundle_info, team_id) }
-        
+ # You can't remove IN_APP_PURCHASE capability for some reason
+          capabilities + [SimpleCapability.new("IN_APP_PURCHASE")]).map { |capability| capability.to_bundle_capability(bundle_info, team_id) }
+
         Starship::Client.patch_bundle(bundle_info, team_id, new_capabilities)
 
         logger.info "Bundle '#{bundle_identifier}' capabilities updated."
