@@ -83,8 +83,6 @@ module Adsedare
 
       options_plist = Plist::Emit.dump(export_options)
       File.write(File.expand_path(export_path), options_plist)
-
-      return export_options
     end
   end
 end
