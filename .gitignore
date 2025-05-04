@@ -56,3 +56,8 @@ build-iPhoneSimulator/
 # .rubocop-https?--*
 
 *.p8
+*.cer
+*.p12
+*.kc
+.env
+.fl*
