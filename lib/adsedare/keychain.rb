@@ -21,6 +21,17 @@ module Adsedare
   APPLE_WWDRCA = "https://developer.apple.com/certificationauthority/AppleWWDRCA.cer"
 
   class << self
+    # Create a build keychain with all required intermediate certificates
+    # Set following environment variables to add project specific certificates:
+    #
+    # - AD_HOC_CERTIFICATE Path to the ad-hoc certificate
+    # - AD_HOC_PRIVATE_KEY Path to the ad-hoc private key
+    # - AD_HOC_KEY_PASSWORD Password for the ad-hoc private key
+    #
+    # @param keychain_path [String] The path to the keychain
+    # @param keychain_password [String] The password for the keychain
+    # @param make_default [Boolean] Whether to make the keychain the default
+    # @return [void]
     def create_keychain(keychain_path = nil, keychain_password = nil, make_default = true)
       raise "Keychain path is not set" unless keychain_path
       raise "Keychain password is not set" unless keychain_password

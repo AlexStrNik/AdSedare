@@ -5,6 +5,18 @@ require_relative "../appstoreconnect"
 
 module Adsedare
   class << self
+    # Create export options for a project
+    # Expects environment variables to be set:
+    #
+    # - APPSTORE_CONNECT_KEY_ID Key ID from Apple Developer Portal
+    # - APPSTORE_CONNECT_ISSUER_ID Issuer ID from Apple Developer Portal
+    # - APPSTORE_CONNECT_KEY P8 key content from Apple Developer Portal
+    #
+    # @param project_path [String] The path to the Xcode project
+    # @param export_path [String] The path to the export options plist
+    # @param team_id [String] The team ID (optional)
+    # @param options [Hash] Additional options (optional)
+    # @return [void]
     def make_export_options(project_path = nil, export_path = nil, team_id = nil, options = {})
       raise "Project path is not set" unless project_path
       raise "Export path is not set" unless export_path

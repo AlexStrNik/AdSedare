@@ -5,6 +5,17 @@ require_relative "../appstoreconnect"
 
 module Adsedare
   class << self
+    # Patch a project with App Store Connect profiles & settings for ad-hoc distribution
+    # Will overwrite Team ID in project if provided
+    # Expects environment variables to be set:
+    #
+    # - APPSTORE_CONNECT_KEY_ID Key ID from Apple Developer Portal
+    # - APPSTORE_CONNECT_ISSUER_ID Issuer ID from Apple Developer Portal
+    # - APPSTORE_CONNECT_KEY P8 key content from Apple Developer Portal
+    #
+    # @param project_path [String] The path to the Xcode project
+    # @param team_id [String] The team ID (optional)
+    # @return [void]
     def patch_project(project_path, team_id = nil)
       raise "Project path is not set" unless project_path
 

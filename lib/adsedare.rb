@@ -23,6 +23,16 @@ module Adsedare
   class << self
     include Logging
 
+    # Renew profiles for a project
+    # Expects environment variables to be set:
+    #
+    # - APPLE_DEVELOPER_USERNAME Apple Developer Portal username
+    # - APPLE_DEVELOPER_PASSWORD Apple Developer Portal password
+    #
+    # @param project_path [String] The path to the Xcode project
+    # @param certificate_id [String] The certificate ID
+    # @param team_id [String] The team ID (optional)
+    # @return [void]
     def renew_profiles(project_path = nil, certificate_id = nil, team_id = nil)
       raise "Project path is not set" unless project_path
       raise "Certificate ID is not set" unless certificate_id

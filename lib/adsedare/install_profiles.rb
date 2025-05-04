@@ -6,6 +6,15 @@ require_relative "../appstoreconnect"
 
 module Adsedare
   class << self
+    # Install provisioning profiles for a project
+    # Expects environment variables to be set:
+    #
+    # - APPSTORE_CONNECT_KEY_ID Key ID from Apple Developer Portal
+    # - APPSTORE_CONNECT_ISSUER_ID Issuer ID from Apple Developer Portal
+    # - APPSTORE_CONNECT_KEY P8 key content from Apple Developer Portal
+    #
+    # @param project_path [String] The path to the Xcode project
+    # @return [void]
     def install_profiles(project_path = nil)
       raise "Project path is not set" unless project_path
 

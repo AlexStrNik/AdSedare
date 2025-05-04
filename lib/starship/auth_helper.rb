@@ -15,7 +15,7 @@ require_relative "../logging"
 module Starship
   class Error < StandardError; end
 
-  # AuthHelper handles authentication with Apple"s developer portal
+  # AuthHelper handles authentication with Apple's developer portal
   class AuthHelper
     include Logging
 
