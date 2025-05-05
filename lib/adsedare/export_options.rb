@@ -21,7 +21,7 @@ module Adsedare
       raise "Project path is not set" unless project_path
       raise "Export path is not set" unless export_path
 
-      logger.info "Creating export options for project'"
+      logger.info "Creating export options for project"
 
       project = Xcodeproj::Project.open(project_path)
       export_options = {

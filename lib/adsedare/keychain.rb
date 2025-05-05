@@ -47,6 +47,12 @@ module Adsedare
         return
       end
 
+      status = system("security list-keychains -d user -s #{keychain_path}")
+      unless status
+        logger.error "Failed to add keychain to search list"
+        return
+      end
+
       APPLE_CERTS.each do |cert|
         logger.info "Downloading certificate '#{cert}'"
 
@@ -92,8 +98,8 @@ module Adsedare
         return
       end
 
-      install_certificate(ad_hoc_private_key, keychain_path, ad_hoc_key_password, "priv")
       install_certificate(ad_hoc_certificate, keychain_path, "", "cert")
+      install_certificate(ad_hoc_private_key, keychain_path, ad_hoc_key_password, "priv")
 
       if make_default
         status = system("security default-keychain -d user -s #{keychain_path}")
@@ -122,8 +128,13 @@ module Adsedare
       end
 
       logger.info "Keychain created at '#{keychain_path}'"
-    end
 
+      status = system("security find-identity -p codesigning")
+      unless status
+        logger.error "Failed to find codesigning identity"
+        return
+      end
+    end
     private
 
     def install_certificate(certificate_path, keychain_path, certificate_password = "", certificate_type = "cert")
@@ -132,7 +143,7 @@ module Adsedare
 
       status = system("security import #{certificate_path} -k #{keychain_path} -t #{certificate_type} -A -P #{certificate_password} -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/productbuild")
       unless status
-        logger.error "Failed to install certificate '#{certificate_name}' to keychain '#{keychain_path}'"
+        logger.warn "Failed to install certificate '#{certificate_name}' to keychain '#{keychain_path}'"
         return
       end
 
