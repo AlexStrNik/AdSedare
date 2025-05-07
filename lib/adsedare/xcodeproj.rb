@@ -35,8 +35,10 @@ module Adsedare
         bundle_by_identifier[bundle_id["attributes"]["identifier"]] = bundle_id
       end
 
-      bundles_with_profiles["included"].each do |profile|
-        profiles_by_id[profile["id"]] = profile
+      if bundles_with_profiles["included"]
+        bundles_with_profiles["included"].each do |profile|
+          profiles_by_id[profile["id"]] = profile
+        end
       end
 
       project.targets.each do |target|
