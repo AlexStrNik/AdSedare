@@ -174,8 +174,8 @@ module Adsedare
       need_update = false
 
       capabilities.each do |capability|
-        if capability.check?(bundle_info)
-        else
+        if !capability.check?(bundle_info)
+          logger.warn "Bundle '#{bundle_identifier}' is missing capability '#{capability.type}'."
           need_update = true
         end
       end

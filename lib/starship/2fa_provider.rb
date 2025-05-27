@@ -7,19 +7,13 @@ module Starship
     def initialize
     end
 
-    # Get the 2FA code
-    # @param session_id [String] The session ID from Apple
-    # @param scnt [String] The scnt value from Apple
-    # @return [String] The 2FA code
     def get_code(session_id, scnt)
       raise NotImplementedError, "Subclasses must implement get_code"
     end
 
-    # Verify if this provider can handle the given 2FA type
-    # @param type [String] The 2FA type (sms, voice, etc.)
-    # @return [Boolean] Whether this provider can handle the given type
-    def can_handle?(type)
-      raise NotImplementedError, "Subclasses must implement can_handle?"
+    # @return [String] The type of 2FA ("phone", "trusteddevice")
+    def two_factor_type
+      raise NotImplementedError, "Subclasses must implement two_factor_type"
     end
   end
 
@@ -33,8 +27,8 @@ module Starship
       code
     end
 
-    def can_handle?(type)
-      true
+    def two_factor_type
+      "trusteddevice"
     end
   end
 end

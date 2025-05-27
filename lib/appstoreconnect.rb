@@ -24,7 +24,6 @@ module AppStoreConnect
         if response.status == 200
           JSON.parse(response.body)
         else
-          puts response.body
           raise "Failed to get bundle IDs: #{response.status}"
         end
       end

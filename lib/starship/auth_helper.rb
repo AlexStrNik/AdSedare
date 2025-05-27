@@ -8,6 +8,7 @@ require "digest"
 require "fileutils"
 require "openssl"
 require "securerandom"
+require "fastlane-sirp"
 
 require_relative "2fa_provider"
 require_relative "../logging"
@@ -18,13 +19,19 @@ module Starship
   # AuthHelper handles authentication with Apple's developer portal
   class AuthHelper
     include Logging
-
+    
+    @two_factor_provider = Starship::ManualTwoFactorProvider.new
     attr_reader :session, :csrf, :csrf_ts, :session_data
 
     AUTH_ENDPOINT = "https://idmsa.apple.com/appleauth/auth"
     WIDGET_KEY_URL = "https://appstoreconnect.apple.com/olympus/v1/app/config?hostname=itunesconnect.apple.com"
 
-    def initialize(two_factor_provider = nil)
+    def two_factor_provider=(provider)
+      @two_factor_provider = provider
+      logger.info "Two-factor provider set to #{provider.class.name}"
+    end
+
+    def initialize()
       # Create session directory if it doesn't exist
       @session_directory = File.expand_path("~/.starship")
       FileUtils.mkdir_p(@session_directory)
@@ -34,7 +41,6 @@ module Starship
       @csrf_ts = nil
       @email = nil
       @session_data = {}
-      @two_factor_provider = two_factor_provider || Starship::ManualTwoFactorProvider.new
 
       # Initialize Faraday with cookie jar
       @session = Faraday.new do |builder|
@@ -72,8 +78,6 @@ module Starship
       auth_result = authenticate_with_srp(email, password)
 
       if auth_result == :two_factor_required
-        logger.info "Two-factor authentication required. Requesting verification code..."
-
         handle_two_factor_auth
       elsif auth_result
         # After successful authentication, get CSRF tokens
@@ -303,13 +307,60 @@ module Starship
       end
     end
 
+    def to_hex(str)
+      str.unpack1('H*')
+    end
+
+    def to_byte(str)
+      [str].pack('H*')
+    end
+
+    def pbkdf2(password, salt, iterations, key_length, digest = OpenSSL::Digest::SHA256.new)
+      password = OpenSSL::Digest::SHA256.digest(password)
+      OpenSSL::PKCS5.pbkdf2_hmac(password, salt, iterations, key_length, digest)
+    end
+
+    def fetch_hashcash
+      response = @session.get(
+        "#{AUTH_ENDPOINT}/signin?widgetKey=#{widget_key}",
+      )
+      headers = response.headers
+
+      bits = headers["X-Apple-HC-Bits"]
+      challenge = headers["X-Apple-HC-Challenge"]
+
+      if bits.nil? || challenge.nil?
+        logger.warn "Unable to find 'X-Apple-HC-Bits' and 'X-Apple-HC-Challenge' to make hashcash"
+        return nil
+      end
+
+      return make_hashcash(bits: bits, challenge: challenge)
+    end
+
+    def make_hashcash(bits: nil, challenge: nil)
+      version = 1
+      date = Time.now.strftime("%Y%m%d%H%M%S")
+
+      counter = 0
+      loop do
+        hc = [
+          version, bits, date, challenge, ":#{counter}"
+        ].join(":")
+
+        if Digest::SHA1.digest(hc).unpack1('B*')[0, bits.to_i].to_i == 0
+          return hc
+        end
+        counter += 1
+      end
+    end
+
     # Authenticate with Secure Remote Password protocol
     # @param email [String] The email address
     # @param password [String] The password
     # @return [Boolean, Symbol] True if successful, :two_factor_required if 2FA is needed, false otherwise
     def authenticate_with_srp(email, password)
-      # This is a simplified SRP implementation since Ruby doesn"t have a direct equivalent to Python"s srp library
-      # In a real implementation, you would use a proper SRP library or implement the full protocol
+      client = SIRP::Client.new(2048)
+	    a = client.start_authentication()
 
       headers = {
         "Accept" => "application/json, text/javascript",
@@ -318,6 +369,17 @@ module Starship
         "X-Apple-Widget-Key" => widget_key,
       }
 
+      federate_data = {
+        "accountName" => email,
+        "rememberMe" => false,
+      }
+
+      response = @session.post(
+        "#{AUTH_ENDPOINT}/federate?isRememberMeEnabled=false",
+        federate_data.to_json,
+        headers
+      )
+
       if @session_data["session_id"]
         headers.update({
           "X-Apple-ID-Session-Id" => @session_data["session_id"],
@@ -325,18 +387,54 @@ module Starship
         })
       end
 
-      # For simplicity, we"ll use a direct password-based authentication approach
-      # In a real implementation, you would implement the full SRP protocol
-      auth_data = {
-        "accountName" => email,
-        "password" => password,
-        "rememberMe" => true,
+      init_data = {
+        "a": Base64.strict_encode64(to_byte(a)),
+        "accountName": email,
+        "protocols": ["s2k", "s2k_fo"],
       }
 
-      logger.info "Initializing authentication request to Apple ID..."
       response = @session.post(
-        "#{AUTH_ENDPOINT}/signin",
-        auth_data.to_json,
+        "#{AUTH_ENDPOINT}/signin/init",
+        init_data.to_json,
+        headers
+      )
+
+      body = JSON.parse(response.body)
+      salt = Base64.strict_decode64(body["salt"])
+      b = Base64.strict_decode64(body["b"])
+      c = body["c"]
+      iterations = body["iteration"]
+      key_length = 32
+
+      encrypted_password = pbkdf2(password, salt, iterations, key_length)
+
+      m1 = client.process_challenge(
+        email,
+        to_hex(encrypted_password),
+        to_hex(salt),
+        to_hex(b),
+        is_password_encrypted: true
+      )
+      m2 = client.H_AMK
+
+      complete_data = {
+        "accountName": email,
+        "c": c,
+        "m1": Base64.encode64(to_byte(m1)).strip,
+        "m2": Base64.encode64(to_byte(m2)).strip,
+        "rememberMe": false
+      }
+
+      hashcash = self.fetch_hashcash
+      if hashcash
+        headers.update({
+          "X-Apple-HC" => hashcash,
+        })
+      end
+
+      response = @session.post(
+        "#{AUTH_ENDPOINT}/signin/complete?isRememberMeEnabled=false",
+        complete_data.to_json,
         headers
       )
 
@@ -391,11 +489,60 @@ module Starship
       end
 
       begin
-        # Get 2FA code from provider
+        two_factor_type = @two_factor_provider.two_factor_type
+        logger.info "Two-factor authentication required. Requesting #{two_factor_type} verification code..."
+
+        auth_options_headers = {
+          "Accept" => "application/json, text/javascript",
+          "Content-Type" => "application/json",
+          "X-Requested-With" => "XMLHttpRequest",
+          "X-Apple-ID-Session-Id" => session_id,
+          "scnt" => scnt,
+          "X-Apple-Widget-Key" => widget_key,
+        }
+
+        auth_options_response = @session.get(
+          "#{AUTH_ENDPOINT}/auth",
+          nil,
+          auth_options_headers
+        )
+        auth_options = JSON.parse(auth_options_response.body)
+
+        trigger_headers = {
+          "Accept" => "application/json",
+          "Content-Type" => "application/json",
+          "X-Requested-With" => "XMLHttpRequest",
+          "X-Apple-ID-Session-Id" => session_id,
+          "scnt" => scnt,
+          "X-Apple-Widget-Key" => widget_key,
+        }
+
+        trigger_data = {
+        }
+
+        if two_factor_type == "phone"
+          phone_number = auth_options["trustedPhoneNumbers"][0]
+          trigger_data = {
+            "phoneNumber" => {
+              "id" => phone_number["id"],
+            },
+            "mode" => "sms",
+          }
+          logger.info "Sending SMS to #{phone_number["numberWithDialCode"]}"
+        end
+
+        response = @session.put(
+          "#{AUTH_ENDPOINT}/verify/#{two_factor_type}",
+          trigger_data.to_json,
+          trigger_headers
+        )
+
         code = @two_factor_provider.get_code(session_id, scnt)
 
+        logger.info "Received code: #{code}"
+
         verify_headers = {
-          "Accept" => "application/json, text/javascript",
+          "Accept" => "application/json",
           "Content-Type" => "application/json",
           "X-Requested-With" => "XMLHttpRequest",
           "X-Apple-ID-Session-Id" => session_id,
@@ -405,14 +552,19 @@ module Starship
 
         verify_data = { "securityCode" => { "code" => code.strip } }
 
+        if two_factor_type == "phone"
+          verify_data["phoneNumber"] = trigger_data["phoneNumber"]
+          verify_data["mode"] = trigger_data["mode"]
+        end
+
         # First verify the security code
         verify_response = @session.post(
-          "#{AUTH_ENDPOINT}/verify/trusteddevice/securitycode",
+          "#{AUTH_ENDPOINT}/verify/#{two_factor_type}/securitycode",
           verify_data.to_json,
           verify_headers
         )
 
-        if verify_response.status == 204
+        if verify_response.status == 204 || verify_response.status == 200
           logger.info "Two-factor code verified successfully."
           logger.info "Trusting the session after 2FA verification..."
 
@@ -423,7 +575,7 @@ module Starship
             verify_headers
           )
 
-          if trust_response.status == 204
+          if trust_response.status == 204 || trust_response.status == 200
             # Store all relevant session data
             @session_data.update({
               "session_id" => session_id,

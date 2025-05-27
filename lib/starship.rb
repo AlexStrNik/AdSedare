@@ -8,6 +8,10 @@ require_relative "starship/auth_helper"
 # Starship is a wrapper around Apple's developer portal API
 # Inspired by Fatslane's Spaceship
 module Starship
+  def self.set_provider(provider)
+    Client.auth_helper.two_factor_provider = provider
+  end
+
   class Client
     DEV_SERVICES_V1 = "https://developer.apple.com/services-account/v1"
     DEV_SERVICES_QH65B2 = "https://developer.apple.com/services-account/QH65B2"

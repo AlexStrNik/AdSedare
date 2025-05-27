@@ -3,12 +3,27 @@
 
 require "bundler/setup"
 require "adsedare"
+require "adsedare_mattermost"
 
 # You can add fixtures and/or initialization code here to make experimenting
 # with your gem easier. You can also use a different console, if you like.
 
 # Create a global reference to the Adsedare module for easy access
 $adsedare = Adsedare
+
+provider = AdsedareMattermost::Provider.new(
+  lambda do |messages|
+    apple_message = messages.find { |message| message.include?("Apple") && message.include?(ENV["APPLE_DEVELOPER_PHONE"]) }
+
+    if apple_message.nil?
+      return nil
+    end
+
+    code = apple_message.match(/Your Apple Account Code is: (\d{6})/).captures[0]
+    return code
+  end
+)
+Starship::set_provider(provider)
 
 # Define a reload method to make development easier
 def reload!

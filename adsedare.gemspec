@@ -33,4 +33,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday", "~> 2.7"
   spec.add_dependency "faraday-cookie_jar", "~> 0.0.7"
   spec.add_dependency "plist", "~> 3.2.0"
+  spec.add_dependency "fastlane-sirp", "~> 1.0"
 end

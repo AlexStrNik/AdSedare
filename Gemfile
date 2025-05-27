@@ -6,3 +6,4 @@ source "https://rubygems.org"
 gemspec
 
 gem "rufo"
+gem "adsedare_mattermost", "~> 0.0.4"
